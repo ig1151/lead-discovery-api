@@ -1,6 +1,12 @@
 import { tavilySearch } from './search';
 import { claudeExtractLeads } from './claude';
 
+export interface LeadContact {
+  name: string | null;
+  email: string | null;
+  role: string | null;
+}
+
 export interface Lead {
   company: string;
   website: string | null;
@@ -10,7 +16,8 @@ export interface Lead {
   size: string | null;
   hiring: boolean;
   signals: string[];
-  contact_hint: string | null;
+  confidence: number;
+  contact: LeadContact;
   lead_score: number;
   contact_ready: boolean;
 }
@@ -27,7 +34,9 @@ export interface LeadDiscoveryResult {
 function scoreLead(lead: Lead): number {
   let score = 50;
   if (lead.hiring) score += 15;
-  if (lead.contact_hint) score += 10;
+  if (lead.contact?.email) score += 15;
+  if (lead.contact?.name) score += 5;
+  if (lead.contact?.role) score += 5;
   if (lead.location) score += 5;
   if (lead.size) score += 5;
   if (lead.website) score += 5;
@@ -41,7 +50,7 @@ function scoreLead(lead: Lead): number {
 }
 
 function isContactReady(lead: Lead): boolean {
-  return !!(lead.contact_hint && lead.website && lead.company);
+  return !!(lead.contact?.email && lead.website && lead.company);
 }
 
 export async function discoverLeads(
@@ -77,7 +86,13 @@ export async function discoverLeads(
   if (filters?.size) {
     leads = leads.filter(l => !l.size || l.size.includes(filters.size!));
   }
-  leads = leads.map(l => ({ ...l, lead_score: scoreLead(l), contact_ready: isContactReady(l) }));
+  leads = leads.map(l => ({
+    ...l,
+    contact: l.contact ?? { name: null, email: null, role: null },
+    confidence: l.confidence ?? 0.5,
+    lead_score: scoreLead(l),
+    contact_ready: isContactReady(l),
+  }));
   leads.sort((a, b) => b.lead_score - a.lead_score);
   return {
     query,

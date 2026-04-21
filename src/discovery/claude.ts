@@ -8,7 +8,7 @@ export async function claudeExtractLeads(content: string, query: string, limit: 
 
   const prompt = `You are a lead generation expert. Based on the search results below, extract company leads matching this query: "${query}"
 
-Return ONLY a valid JSON array of up to ${limit} leads. Each lead must have:
+Return ONLY a valid JSON array of up to ${limit} leads. Each lead must have exactly this structure:
 {
   "company": "company name",
   "website": "domain only e.g. stripe.com",
@@ -16,14 +16,20 @@ Return ONLY a valid JSON array of up to ${limit} leads. Each lead must have:
   "industry": "industry name",
   "location": "city, country or null",
   "size": "employee range or null",
-  "hiring": true or false based on signals,
-  "signals": ["reason this is a good lead"],
-  "contact_hint": "likely contact email pattern or null"
+  "hiring": true or false,
+  "signals": ["specific reason this is a good lead"],
+  "confidence": 0.0 to 1.0 based on how confident you are this matches the query,
+  "contact": {
+    "name": "full name if found or null",
+    "email": "email address if found or null",
+    "role": "job title if found e.g. CEO, Founder, CTO or null"
+  }
 }
 
 Rules:
 - Only include real companies with clear web presence
-- Extract from the search results only — do not hallucinate
+- Extract contact info only if explicitly found in the search results
+- confidence should reflect how well this lead matches the query
 - Return only the JSON array, no markdown or explanation
 
 Search results:
